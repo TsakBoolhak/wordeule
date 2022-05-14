@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 #include <random>
+#include <algorithm>
 
 #define BACKGROUND_DEFAULT "\033[49m"
 #define FOREGROUND_DEFAULT "\033[39m"
@@ -12,8 +13,8 @@
 #define FOREGROUND_GREEN "\033[32m"
 #define BACKGROUND_YELLOW "\033[103m"
 #define FOREGROUND_YELLOW "\033[33m"
-#define BACKGROUND_GREY "\033[37m"
-#define FOREGROUND_GREY "\033[47m"
+#define BACKGROUND_GREY "\033[47m"
+#define FOREGROUND_GREY "\033[37m"
 
 bool	fillDictionnary( std::unordered_set< std::string > & dictionnary ) {
 
@@ -45,7 +46,7 @@ bool	fillDictionnary( std::unordered_set< std::string > & dictionnary ) {
 #define YELLOW 1
 #define GREEN 2
 
-void	printWord( std::string const & word, std::string const & answer ) {
+void	printWord( std::string & word, std::string const & answer ) {
 
 	int colors[5] = { 0 };
 
@@ -95,15 +96,16 @@ void	printWord( std::string const & word, std::string const & answer ) {
 		switch (colors[i]) {
 
 			case GREEN :
-				std::cout << BACKGROUND_GREEN;
+				std::cout << FOREGROUND_GREEN;
 				break;
 			case YELLOW :
-				std::cout << BACKGROUND_YELLOW;
+				std::cout << FOREGROUND_YELLOW;
 				break;
 			default :
+				std::cout << FOREGROUND_GREY;
 				break;
 		}
-		std::cout << word[i] << BACKGROUND_DEFAULT;
+		std::cout <<  /*"\033[1m" << */static_cast<char>(std::toupper(word[i])) << /*"\033[0m" <<*/ FOREGROUND_DEFAULT << BACKGROUND_DEFAULT;
 		if ( i != 4 )
 			std::cout << " ";
 	}
@@ -111,9 +113,9 @@ void	printWord( std::string const & word, std::string const & answer ) {
 	return ;
 }
 
-void	printGrid( std::vector< std::string > const & grid, std::string const & answer ) {
+void	printGrid( std::vector< std::string > & grid, std::string const & answer ) {
 
-	for ( std::vector< std::string >::const_iterator it = grid.begin() ; it != grid.end() ; ++it ) {
+	for ( std::vector< std::string >::iterator it = grid.begin() ; it != grid.end() ; ++it ) {
 
 		printWord( *it, answer );
 	}
@@ -189,6 +191,8 @@ int	main() {
 			else if ( it == dictionnary.end() )
 				std::cout << "The word is not in the word list" << std::endl;
 		} while ( std::cin.eof() == 0 &&  ( input.size() != 5 || it == dictionnary.end() ) );
+		if (std::cin.eof() == 1)
+			break;
 		grid[guess - 1] = input;
 		printGrid(grid, answer);
 		guess++;
