@@ -7,14 +7,17 @@
 #include <random>
 #include <algorithm>
 
-#define BACKGROUND_DEFAULT "\033[49m"
 #define FOREGROUND_DEFAULT "\033[39m"
-#define BACKGROUND_GREEN "\033[42m"
+#define FOREGROUND_WHITE "\033[37m"
 #define FOREGROUND_GREEN "\033[32m"
-#define BACKGROUND_YELLOW "\033[103m"
 #define FOREGROUND_YELLOW "\033[33m"
-#define BACKGROUND_GREY "\033[47m"
-#define FOREGROUND_GREY "\033[37m"
+#define FOREGROUND_GREY "\033[90m"
+#define FOREGROUND_BOLD "\033[1m"
+#define FOREGROUND_UNBOLD "\033[0m"
+
+#define GREY 0
+#define YELLOW 1
+#define GREEN 2
 
 bool	fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, char **av ) {
 
@@ -28,7 +31,7 @@ bool	fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, 
 
 			str.clear();
 			getline( infile, str );
-			if ( str.size() == 5)
+			if ( str.size() == 5 && std::all_of( str.begin(), str.end(), []( char c ) { return std::isalpha(c); } ) )
 				dictionnary.insert(str);
 		} while ( infile );
 
@@ -44,7 +47,7 @@ bool	fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, 
 
 				str.clear();
 				getline( infile, str );
-				if ( str.size() == 5)
+				if ( str.size() == 5 && std::all_of( str.begin(), str.end(), []( char c ) { return std::isalpha(c); } ) )
 					dictionnary.insert(str);
 			} while ( infile );
 
@@ -57,11 +60,78 @@ bool	fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, 
 	return true;
 }
 
-#define GREY 0
-#define YELLOW 1
-#define GREEN 2
+void	setGreen( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
 
-void	printWord( std::string & word, std::string const & answer ) {
+	std::string::const_iterator wordIt = word.begin();
+	std::string::const_iterator answerIt = answer.begin();
+	std::vector<int>::iterator	colorsIt = colors.begin();
+	for ( ; wordIt != word.end() && answerIt != answer.end() && colorsIt != colors.end() ; ++wordIt, ++answerIt, ++colorsIt ) {
+
+		if ( *wordIt == *answerIt )
+			*colorsIt = GREEN;
+	}
+	return;
+}
+
+void	setYellow( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
+
+	std::string::const_iterator answerIt = answer.begin();
+	
+	for ( ; answerIt != answer.end(); ++answerIt ) {
+		
+		std::vector< int>::iterator colorsIt = colors.begin();
+		for ( std::string::const_iterator wordIt = word.begin() ; wordIt != word.end() && colorsIt != colors.end() ; ++wordIt, ++colorsIt ) {
+
+			if ( *colorsIt == GREY && *answerIt == *wordIt ) {
+
+				*colorsIt = YELLOW;
+				break;
+			}
+		}
+		
+	}
+
+	return ;
+}
+
+void	setColors( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
+
+	setGreen( colors, word, answer );
+	setYellow( colors, word, answer );
+}
+
+void	printWord( std::string word, std::string const & answer ) {
+
+	std::vector<int> colors;
+
+	colors.insert( colors.end(), 5, GREY);
+	setColors(colors, word, answer);
+
+	for_each( word.begin(), word.end(), [](char & c) {c = std::toupper(c);} );
+	std::vector<int>::iterator colorsIt = colors.begin();
+	for (std::string::iterator it = word.begin() ; it != word.end() && colorsIt != colors.end(); ++it, ++colorsIt) {
+
+		switch ( *colorsIt ) {
+
+			case GREEN :
+				std::cout << FOREGROUND_GREEN;
+				break;
+			case YELLOW :
+				std::cout << FOREGROUND_YELLOW;
+				break;
+			default :
+				std::cout << FOREGROUND_GREY;
+				break;
+		}
+		std::cout << FOREGROUND_BOLD  << *it << FOREGROUND_UNBOLD << FOREGROUND_WHITE;
+		if ( it + 1 != word.end() )
+			std::cout << " ";
+	}
+	std::cout << std::endl;
+	return ;
+}
+
+void	printWordblabla( std::string & word, std::string const & answer ) {
 
 	int colors[5] = { 0 };
 
@@ -76,12 +146,6 @@ void	printWord( std::string & word, std::string const & answer ) {
 		}
 	}
 	
-/*
-	std::cout << "initial count : ";
-	for (int i = 0; i < 5 ; i++)
-		std::cout << letters_count[i] << " ";
-	std::cout << std::endl;
-*/
 	for ( std::string::size_type i = 0 ; i < answer.size() ; i ++) {
 	
 			if (answer[i] == word[i]) {
@@ -94,12 +158,6 @@ void	printWord( std::string & word, std::string const & answer ) {
 			}
 	}
 
-/*
-	std::cout << "intermediate count : ";
-	for (int i = 0; i < 5 ; i++)
-		std::cout << letters_count[i] << " ";
-	std::cout << std::endl;
-*/
 	for ( std::string::size_type i = 0 ; i < answer.size() ; i++) {
 	
 		for ( std::string::size_type j = 0  ; j < answer.size() ; j++) {
@@ -117,12 +175,6 @@ void	printWord( std::string & word, std::string const & answer ) {
 		}
 	}
 
-/*
-	std::cout << "final count : ";
-	for (int i = 0; i < 5 ; i++)
-		std::cout << letters_count[i] << " ";
-	std::cout << std::endl;
-*/
 	std::for_each(word.begin(), word.end(), [](char & c) { c = std::toupper(c); } );
 	for (std::string::size_type i = 0; i < answer.size() ; i++ ) {
 
@@ -135,10 +187,10 @@ void	printWord( std::string & word, std::string const & answer ) {
 				std::cout << FOREGROUND_YELLOW;
 				break;
 			default :
-				std::cout << "\033[90m";
+				std::cout << FOREGROUND_GREY;
 				break;
 		}
-		std::cout <<  "\033[1m" << word[i] << "\033[0m" << FOREGROUND_GREY << BACKGROUND_DEFAULT;
+		std::cout << FOREGROUND_BOLD  << word[i] << FOREGROUND_BOLD << FOREGROUND_WHITE;
 		if ( i != 4 )
 			std::cout << " ";
 	}
@@ -177,8 +229,7 @@ int	main(int ac, char **av) {
 	std::uniform_int_distribution<std::mt19937::result_type> dist( 1, dictionnary.size() );
 	size_t lol = dist(rng);
 
-
-	std::cout << FOREGROUND_GREY;
+	std::cout << FOREGROUND_WHITE;
 	{
 		
 		std::unordered_set<std::string>::iterator it = dictionnary.begin();
@@ -192,20 +243,6 @@ int	main(int ac, char **av) {
 
 		grid.push_back("_____");
 	}
-	/* testing if parsing of dictionnary went fine
-	std::unordered_set<std::string>::iterator it = dictionnary.find("zappy");
-	if ( it == dictionnary.end() )
-		std::cout << "not ";
-	std::cout << "found" << std::endl;
-	it = dictionnary.find("asdasdasfdasdfasfa");
-	if ( it == dictionnary.end() )
-		std::cout << "not ";
-	std::cout << "found" << std::endl;
-	it = dictionnary.find("");
-	if ( it == dictionnary.end() )
-		std::cout << "not ";
-	std::cout << "found" << std::endl;
-	end of test*/
 
 	std::cout << "Total words available: " << dictionnary.size() << std::endl;
 
