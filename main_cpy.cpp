@@ -37,69 +37,22 @@ class RandomGen {
 			return;
 		}
 
-
 		size_t	getRandomValue() {
 
 			return dist(rng);
 		}
-
-		RandomGen &	operator=( const RandomGen & src ) {
-
-			if ( this != &src ) {
-
-				this->rd = src.rd;
-				this->rng = src.rng;
-				this->dist = dist;
-			}
-			return *this;
-		}
 };
 
-class Wordle {
+bool	fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, char **av ) {
 
-	protected :
+	std::ifstream	infile;
+	std::string str;
 
-		bool								quit;
-		std::unordered_set< std::string >	dictionnary;
-		size_t								guess;
-		RandomGen							randGen;
-		std::vector< std::string >			grid;
-		std::string							answer;
-		std::vector< std::vector< int > >	colorsVec;
-
-		void	parseFile( char *file );
-		bool	fillDictionnary( int ac, char **av );
-		void	setGreen( std::vector< int > & colors, std::string const & word );
-		void	setYellow( std::vector< int > & colors, std::string const & word );
-		void	setColors( std::vector< int > & colors, std::string const & word );
-		
-
-	public :
-
-		Wordle( int ac = 1, char **av = { "" } ) {
-
-			quit = fillDictionnary( ac, av, dictionnary );
-			guess = 0;
-			randGen = RandomGen ( 1, dictionnary.size() );
-			grid.insert( grid.end(), 6, std::string ("_____") );
-			setAnswer();
-			colorsVec.insert( colorsVec.begin(), 6, std::vector<int> () );
-			for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.insert( vec.end(), 5, GREY ); } );
-			return ;
-		}
-
-
-}
-
-void	Wordle::parseFile( char *file ) {
-
-	if ( file == NULL )
-		return ;
-	infile.open( file, std::ifstream::in );
+	infile.open( "words.txt", std::ifstream::in );
 	if ( infile.is_open() == true ) {
 
 		struct stat stats;
-		if ( stat( file, &stats ) != -1 && (stats.st_mode & S_IFMT) == S_IFREG ) {
+		if ( stat( "words.txt", &stats ) != -1 && (stats.st_mode & S_IFMT) == S_IFREG ) {
 
 			do {
 
@@ -112,19 +65,25 @@ void	Wordle::parseFile( char *file ) {
 		infile.close();
 	}
 
-	return ;
-}
-
-bool	Wordle::fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, char **av ) {
-
-	std::ifstream	infile;
-	std::string str;
-
-	parse_file( "words.txt" );
-
 	for ( int i = 1 ; i < ac ; ++i ) {
 
-		parse_file( av[i] );
+		infile.open( av[i], std::ifstream::in );
+
+		if ( infile.is_open() == true ) {
+
+			struct stat stats;
+			if ( stat( av[i], &stats ) != -1 && (stats.st_mode & S_IFMT) == S_IFREG ) {
+
+				do {
+
+					str.clear();
+					getline( infile, str );
+					if ( str.size() == 5 && std::all_of( str.begin(), str.end(), []( char c ) { return std::isalpha(c); } ) )
+						dictionnary.insert(str);
+				} while ( infile );
+			}
+			infile.close();
+		}
 	}
 
 	if ( dictionnary.empty() )
@@ -132,7 +91,7 @@ bool	Wordle::fillDictionnary( std::unordered_set< std::string > & dictionnary , 
 	return true;
 }
 
-void	Wordle::setGreen( std::vector< int > & colors, std::string const & word ) {
+void	setGreen( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
 
 	std::string::const_iterator wordIt = word.begin();
 	std::string::const_iterator answerIt = answer.begin();
@@ -145,7 +104,7 @@ void	Wordle::setGreen( std::vector< int > & colors, std::string const & word ) {
 	return;
 }
 
-void	Wordle::setYellow( std::vector< int > & colors, std::string const & word ) {
+void	setYellow( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
 
 	std::string::const_iterator answerIt = answer.begin();
 	
@@ -169,10 +128,10 @@ void	Wordle::setYellow( std::vector< int > & colors, std::string const & word ) 
 	return ;
 }
 
-void	Wordle::setColors( std::vector< int > & colors, std::string const & word ) {
+void	setColors( std::vector< int > & colors, std::string const & word, std::string const & answer ) {
 
-	setGreen( colors, word );
-	setYellow( colors, word );
+	setGreen( colors, word, answer );
+	setYellow( colors, word, answer );
 }
 
 void	printWord( std::vector<int> const & colors, std::string const & word ) {
