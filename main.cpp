@@ -47,9 +47,8 @@ class RandomGen {
 
 			if ( this != &src ) {
 
-				this->rd = src.rd;
 				this->rng = src.rng;
-				this->dist = dist;
+				this->dist = src.dist;
 			}
 			return *this;
 		}
@@ -59,7 +58,7 @@ class Wordle {
 
 	protected :
 
-		bool								quit;
+		bool								play;
 		std::unordered_set< std::string >	dictionnary;
 		size_t								guess;
 		RandomGen							randGen;
@@ -72,29 +71,55 @@ class Wordle {
 		void	setGreen( std::vector< int > & colors, std::string const & word );
 		void	setYellow( std::vector< int > & colors, std::string const & word );
 		void	setColors( std::vector< int > & colors, std::string const & word );
+		void	printWord( std::vector<int> const & colors, std::string const & word );
+		void	printGrid();
+		void	setAnswer();
+		void	printHeader();
+		void	reset();
 		
-
 	public :
 
-		Wordle( int ac = 1, char **av = { "" } ) {
+		Wordle( int ac = 1, char **av = NULL ) {
 
-			quit = fillDictionnary( ac, av, dictionnary );
-			guess = 0;
-			randGen = RandomGen ( 1, dictionnary.size() );
-			grid.insert( grid.end(), 6, std::string ("_____") );
-			setAnswer();
-			colorsVec.insert( colorsVec.begin(), 6, std::vector<int> () );
-			for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.insert( vec.end(), 5, GREY ); } );
+			play = fillDictionnary( ac, av );
+			if ( play == true )
+			{
+				guess = 0;
+				randGen = RandomGen ( 1, dictionnary.size() );
+				grid.insert( grid.end(), 6, std::string ("_____") );
+				setAnswer();
+				colorsVec.insert( colorsVec.begin(), 6, std::vector<int> () );
+				for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.insert( vec.end(), 5, GREY ); } );
+			}
 			return ;
 		}
 
+		void	game();
+		bool	getPlay() { return play; }
 
+};
+
+void	Wordle::setAnswer() {
+
+	answer.clear();
+	size_t lol = randGen.getRandomValue() ;
+
+	{
+		std::unordered_set<std::string>::iterator it = dictionnary.begin();
+		for (size_t i = 1; i < lol ; i++, it++ )
+			;
+		answer = *it;
+	}
 }
 
 void	Wordle::parseFile( char *file ) {
 
 	if ( file == NULL )
 		return ;
+		
+	std::ifstream	infile;
+	std::string str;
+
 	infile.open( file, std::ifstream::in );
 	if ( infile.is_open() == true ) {
 
@@ -115,16 +140,16 @@ void	Wordle::parseFile( char *file ) {
 	return ;
 }
 
-bool	Wordle::fillDictionnary( std::unordered_set< std::string > & dictionnary , int ac, char **av ) {
+bool	Wordle::fillDictionnary( int ac, char **av ) {
 
-	std::ifstream	infile;
-	std::string str;
 
-	parse_file( "words.txt" );
+	char str[] = "words.txt";
+
+	parseFile( str );
 
 	for ( int i = 1 ; i < ac ; ++i ) {
 
-		parse_file( av[i] );
+		parseFile( av[i] );
 	}
 
 	if ( dictionnary.empty() )
@@ -175,7 +200,7 @@ void	Wordle::setColors( std::vector< int > & colors, std::string const & word ) 
 	setYellow( colors, word );
 }
 
-void	printWord( std::vector<int> const & colors, std::string const & word ) {
+void	Wordle::printWord( std::vector<int> const & colors, std::string const & word ) {
 
 	std::string	tmp (word);
 	for_each( tmp.begin(), tmp.end(), [](char & c) {c = std::toupper(c);} );
@@ -202,7 +227,7 @@ void	printWord( std::vector<int> const & colors, std::string const & word ) {
 	return ;
 }
 
-void	printGrid( std::vector< std::vector< int > > const & colorsVec, std::vector< std::string > const & grid ) {
+void	Wordle::printGrid() {
 
 	std::vector< std::vector< int > >::const_iterator colorsVecIt = colorsVec.begin();
 	for ( std::vector< std::string >::const_iterator it = grid.begin() ; it != grid.end() ; ++it, ++colorsVecIt ) {
@@ -215,46 +240,40 @@ void	printGrid( std::vector< std::vector< int > > const & colorsVec, std::vector
 	return;
 }
 
-int	main(int ac, char **av) {
+void	Wordle::reset() {
 
-	std::unordered_set< std::string > dictionnary;
+	play = true;
+	guess = 0;
+	grid.clear();
+	grid.insert( grid.end(), 6, std::string ("_____") );
+	setAnswer();
+	for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.clear(); } );
+	for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.insert( vec.end(), 5, GREY ); } );
+}
 
-	size_t guess = 0;
+void	Wordle::printHeader() {
 
-	if (fillDictionnary( dictionnary, ac, av ) == false) {
+	if ( play == false ) {
 
 		std::cerr << "Dictionnary file(s) didn't contain any valid word" << std::endl;
-		return 1;
+		return ;
 	}
-	std::vector< std::string > grid;
-	std::string	answer;
-	RandomGen rGen ( 1, dictionnary.size() );
-	size_t lol = rGen.getRandomValue() ;
-
-	{
-		
-		std::unordered_set<std::string>::iterator it = dictionnary.begin();
-		for (size_t i = 1; i < lol ; i++, it++ )
-			;
-		answer = *it;
-	}
-	std::vector< std::vector<int> > colorsVec;
-	colorsVec.insert( colorsVec.end(), 6, std::vector<int> () );
-	for_each( colorsVec.begin(), colorsVec.end(), []( std::vector<int> & vec ) { vec.insert( vec.end(), 5, GREY ); } );
-
 	std::cout << FOREGROUND_WHITE;
-	std::cout << "answer is " << answer << std::endl;
-
-	grid.insert( grid.end(), 6, std::string ( "______" ) );
-
 	std::cout << "Total words available: " << dictionnary.size() << std::endl;
+	printGrid( );
+}
 
-	printGrid( colorsVec, grid );
+void	Wordle::game() {
 
+	if ( play == true )
+		reset();
+	printHeader();
+	if ( play == false )
+		return ;
+	std::string input;
 	do {
 
 		std::unordered_set<std::string>::iterator it;
-		std::string input;
 		std::cout << "input: ";
 		do {
 			getline( std::cin, input );
@@ -265,7 +284,7 @@ int	main(int ac, char **av) {
 			if (input.size() != 5 ) {
 
 				std::cout << "The word must be five letter long!" << std::endl;
-				printGrid( colorsVec, grid );
+				printGrid();
 				std::cout << "input: ";
 				continue;
 			}
@@ -273,15 +292,15 @@ int	main(int ac, char **av) {
 			it = dictionnary.find( input );
 			if ( it == dictionnary.end() ) {
 				std::cout << "The word is not in the word list" << std::endl;
-				printGrid( colorsVec, grid );
+				printGrid();
 				std::cout << "input: ";
 			}
 		} while ( std::cin.eof() == 0 &&  ( input.size() != 5 || it == dictionnary.end() ) );
 		if (std::cin.eof() == 1)
 			break;
 		grid[guess] = input;
-		setColors( *(colorsVec.begin() + guess), grid[guess], answer);
-		printGrid(colorsVec, grid );
+		setColors( *(colorsVec.begin() + guess), grid[guess] );
+		printGrid();
 		if (input == answer)
 			break;
 		guess++;
@@ -299,6 +318,34 @@ int	main(int ac, char **av) {
 
 		std::cout << "Too bad you lost! The word was " << answer << std::endl;
 	}
+	else {
+
+		std::cout << FOREGROUND_DEFAULT;
+		return ;
+	}
+	do {
+
+		input.clear();
+		std::cout << "Do you want to play again? (Y / N) " << std::endl;
+		getline( std::cin, input );
+		if (input.size() > 0)
+			*(input.begin()) = tolower(*(input.begin()));
+	}while ( input != "y" && input != "n" && std::cin.eof() == 0);
+
 	std::cout << FOREGROUND_DEFAULT;
+
+	if ( std::cin.eof() != 0 || input == "n" )
+		play = false;
+}
+
+int	main(int ac, char **av) {
+
+	Wordle	wordle(ac, av);
+
+	do {
+
+		wordle.game();
+	} while (wordle.getPlay() == true && std::cin.eof() == 0 );
+	std::cout << "Good Bye!" << std::endl;
 	return 0;
 }
